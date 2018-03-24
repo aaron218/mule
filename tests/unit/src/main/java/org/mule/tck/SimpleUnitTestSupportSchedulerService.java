@@ -6,6 +6,7 @@
  */
 package org.mule.tck;
 
+import static java.util.Collections.synchronizedList;
 import static java.util.Collections.unmodifiableList;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyString;
@@ -38,8 +39,8 @@ public class SimpleUnitTestSupportSchedulerService implements SchedulerService, 
       new SimpleUnitTestSupportScheduler(8, new NamedThreadFactory(SimpleUnitTestSupportScheduler.class.getSimpleName()),
                                          new AbortPolicy());
 
-  private List<Scheduler> customSchedulers = new ArrayList<>();
-  private List<Scheduler> decorators = new ArrayList<>();
+  private List<Scheduler> customSchedulers = synchronizedList(new ArrayList<>());
+  private List<Scheduler> decorators = synchronizedList(new ArrayList<>());
 
   @Override
   public String getName() {
@@ -185,8 +186,10 @@ public class SimpleUnitTestSupportSchedulerService implements SchedulerService, 
     if (!scheduler.isShutdown()) {
       scheduler.shutdownNow();
     }
-    for (Scheduler customScheduler : customSchedulers) {
-      customScheduler.shutdownNow();
+    synchronized (customSchedulers) {
+      for (Scheduler customScheduler : customSchedulers) {
+        customScheduler.shutdownNow();
+      }
     }
   }
 
@@ -194,8 +197,10 @@ public class SimpleUnitTestSupportSchedulerService implements SchedulerService, 
   public List<SchedulerView> getSchedulers() {
     List<SchedulerView> schedulers = new ArrayList<>();
 
-    for (Scheduler scheduler : decorators) {
-      schedulers.add(new TestSchedulerView(scheduler));
+    synchronized (decorators) {
+      for (Scheduler scheduler : decorators) {
+        schedulers.add(new TestSchedulerView(scheduler));
+      }
     }
 
     return unmodifiableList(schedulers);
